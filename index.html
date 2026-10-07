@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>HRMS Instagram Dark Portal</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+
+  <style>
+    :root {
+      --ig-bg: #000000;
+      --ig-card-bg: #121212;
+      --ig-border: #262626;
+      --ig-text: #f5f5f5;
+      --ig-secondary-text: #a8a8a8;
+      --ig-primary-btn: #0095f6;
+      --ig-gradient: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+      --ig-success: #10b981;
+      --ig-danger: #ed4956;
+      --ig-input-bg: #181818;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+    body { background-color: var(--ig-bg); color: var(--ig-text); display: flex; height: 100vh; overflow: hidden; }
+
+    /* MANDATORY LOGIN OVERLAY */
+    #loginScreen { position: fixed; inset: 0; background: #000; z-index: 9999; display: flex; align-items: center; justify-content: center; }
+    .login-card { background: var(--ig-card-bg); border: 1px solid var(--ig-border); border-radius: 12px; padding: 2.5rem 2rem; width: 100%; max-width: 380px; text-align: center; }
+    .login-brand { font-size: 2rem; font-weight: 700; background: var(--ig-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 1.5rem; }
+    
+    .form-control { margin-bottom: 0.85rem; text-align: left; }
+    .form-control label { font-size: 0.75rem; color: var(--ig-secondary-text); margin-bottom: 0.25rem; display: block; }
+    .form-control input, .form-control select, .form-control textarea { width: 100%; padding: 0.75rem; background: var(--ig-input-bg); border: 1px solid var(--ig-border); border-radius: 6px; color: #fff; font-size: 0.85rem; outline: none; }
+    
+    .btn-login { width: 100%; background: var(--ig-primary-btn); color: white; border: none; padding: 0.65rem; border-radius: 8px; font-weight: 600; cursor: pointer; margin-top: 0.5rem; }
+    .login-error { color: var(--ig-danger); font-size: 0.8rem; margin-top: 0.85rem; display: none; }
+
+    /* MAIN PORTAL LAYOUT */
+    #portalLayout { display: none; width: 100%; height: 100%; }
+    .sidebar { width: 245px; background: #000; border-right: 1px solid var(--ig-border); padding: 1.5rem 1rem; display: flex; flex-direction: column; justify-content: space-between; }
+    .brand-header { font-size: 1.5rem; font-weight: 700; background: var(--ig-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 2rem; padding-left: 0.5rem; }
+    
+    .nav-list { list-style: none; }
+    .nav-item { display: flex; align-items: center; gap: 1rem; padding: 0.85rem; border-radius: 8px; cursor: pointer; color: var(--ig-text); font-size: 0.95rem; margin-bottom: 0.25rem; }
+    .nav-item:hover, .nav-item.active { background: #121212; font-weight: 600; }
+
+    .main-viewport { flex: 1; overflow-y: auto; padding: 2rem; display: flex; justify-content: center; }
+    .feed-container { max-width: 935px; width: 100%; }
+
+    /* SEARCH BAR & CARDS */
+    .search-box { width: 100%; padding: 0.85rem 1.25rem; background: var(--ig-card-bg); border: 1px solid var(--ig-border); border-radius: 25px; color: #fff; font-size: 0.9rem; margin-bottom: 1.5rem; outline: none; }
+    .post-card { background: var(--ig-card-bg); border: 1px solid var(--ig-border); border-radius: 12px; margin-bottom: 1.5rem; padding: 1.25rem; }
+    .post-header { font-weight: 700; border-bottom: 1px solid var(--ig-border); padding-bottom: 0.75rem; margin-bottom: 1rem; color: var(--ig-primary-btn); display: flex; justify-content: space-between; align-items: center; }
+
+    /* 360 PROFILE TABS */
+    .profile-nav { display: flex; gap: 0.5rem; margin-bottom: 1rem; overflow-x: auto; border-bottom: 1px solid var(--ig-border); padding-bottom: 0.5rem; }
+    .sub-tab { padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.8rem; background: #181818; cursor: pointer; border: 1px solid var(--ig-border); white-space: nowrap; }
+    .sub-tab.active { background: var(--ig-primary-btn); border-color: var(--ig-primary-btn); }
+
+    /* RATING GRID */
+    .metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+    
+    .tab-module { display: none; }
+    .tab-module.active { display: block; }
+    .btn-logout { background: transparent; border: 1px solid var(--ig-border); color: var(--ig-danger); width: 100%; padding: 0.6rem; border-radius: 8px; font-weight: 600; cursor: pointer; margin-top: 1rem; }
+  </style>
+</head>
+<body>
+
+  <!-- LOGIN MODULE -->
+  <div id="loginScreen">
+    <div class="login-card">
+      <div class="login-brand"><i class="fa-brands fa-instagram"></i> HRMS Portal</div>
+      <form id="loginForm">
+        <div class="form-control">
+          <label>Emp ID / Email</label>
+          <input type="text" id="loginUsername" placeholder="EMP001 or Email" required>
+        </div>
+        <div class="form-control">
+          <label>Password</label>
+          <input type="password" id="loginPassword" placeholder="••••••••" required>
+        </div>
+        <button type="submit" class="btn-login" id="loginBtn">Log In</button>
+        <div id="loginError" class="login-error">Invalid Credentials</div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MAIN PORTAL -->
+  <div id="portalLayout">
+    <aside class="sidebar">
+      <div>
+        <div class="brand-header"><i class="fa-brands fa-instagram"></i> HRMS Portal</div>
+        <ul class="nav-list">
+          <li class="nav-item active" onclick="switchTab('searchModule', this)"><i class="fa-solid fa-magnifying-glass"></i> 360° Profile Search</li>
+          <li class="nav-item" id="hrbpNav" onclick="switchTab('connectsModule', this)"><i class="fa-solid fa-users-gear"></i> HRBP Connects</li>
+          <li class="nav-item" id="iamNav" onclick="switchTab('iamModule', this)"><i class="fa-solid fa-user-shield"></i> IAM Control</li>
+        </ul>
+      </div>
+      <div>
+        <div style="font-size: 0.8rem; color: var(--ig-secondary-text);">Active Session:<br><b id="activeUserLabel" style="color:#fff;">...</b></div>
+        <button class="btn-logout" onclick="logoutSession()"><i class="fa-solid fa-right-from-bracket"></i> Log Out</button>
+      </div>
+    </aside>
+
+    <main class="main-viewport">
+      <div class="feed-container">
+
+        <!-- MODULE 1: SEARCH & 360 PROFILE -->
+        <div id="searchModule" class="tab-module active">
+          <input type="text" class="search-box" id="empSearchInput" placeholder="🔍 Type Employee ID (e.g., EMP007) and press Enter..." onkeypress="handleSearch(event)">
+          
+          <div id="profileContainer" class="post-card" style="display:none;">
+            <div class="post-header">
+              <span id="profileNameHeader">Employee Name</span>
+              <span id="profileStatusBadge" style="font-size: 0.75rem; background: var(--ig-success); color: #000; padding: 2px 8px; border-radius: 10px;">Active</span>
+            </div>
+
+            <!-- Sub Navigation -->
+            <div class="profile-nav">
+              <div class="sub-tab active" onclick="switchSubTab('subJobData', this)">Job Data</div>
+              <div class="sub-tab" onclick="switchSubTab('subPersonal', this)">Personal Data</div>
+              <div class="sub-tab" onclick="switchSubTab('subComp', this)">Compensation</div>
+              <div class="sub-tab" onclick="switchSubTab('subSkills', this)">Skill Profile</div>
+            </div>
+
+            <!-- Sub Content Areas -->
+            <div id="subJobData" class="sub-content">
+              <p><b>Department:</b> <span id="pDept">-</span></p>
+              <p><b>Designation:</b> <span id="pDesig">-</span></p>
+              <p><b>L1 Manager:</b> <span id="pL1">-</span></p>
+              <p><b>L2 Manager:</b> <span id="pL2">-</span></p>
+              <p><b>Work Location:</b> <span id="pLoc">-</span></p>
+            </div>
+
+            <div id="subPersonal" class="sub-content" style="display:none;">
+              <p><b>Official Email:</b> <span id="pEmail">-</span></p>
+              <p><b>Personal Email:</b> <span id="pPEmail">-</span></p>
+              <p><b>Phone:</b> <span id="pPhone">-</span></p>
+              <p><b>Educational Info:</b> <span id="pEdu">-</span></p>
+            </div>
+
+            <div id="subComp" class="sub-content" style="display:none;">
+              <p><b>Gross Salary:</b> <span id="pSalary">₹ ***** (Masked)</span></p>
+            </div>
+
+            <div id="subSkills" class="sub-content" style="display:none;">
+              <p><b>Skills:</b> <span id="pSkills">-</span></p>
+              <p><b>Certifications:</b> <span id="pCerts">-</span></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- MODULE 2: HRBP CONNECTS WITH 9 METRICS -->
+        <div id="connectsModule" class="tab-module">
+          <div class="post-card">
+            <div class="post-header">Log HRBP Connect Session</div>
+            <form id="hrbpConnectForm">
+              <div class="form-control">
+                <label>Target Employee ID</label>
+                <input type="text" id="cTargetEmpId" placeholder="EMP007" required>
+              </div>
+              <div class="form-control">
+                <label>Connect Date</label>
+                <input type="date" id="cConnectDate" required>
+              </div>
+
+              <!-- 9 Metrics Grid -->
+              <div class="metrics-grid">
+                <div class="form-control">
+                  <label>1. Career Growth</label>
+                  <select id="m1"><option value="Green">Green (Engaged)</option><option value="Amber">Amber (Partially Engaged)</option><option value="Red">Red (Disengaged)</option></select>
+                </div>
+                <div class="form-control">
+                  <label>2. Work Life Balance</label>
+                  <select id="m2"><option value="Green">Green (Engaged)</option><option value="Amber">Amber (Partially Engaged)</option><option value="Red">Red (Disengaged)</option></select>
+                </div>
+                <div class="form-control">
+                  <label>3. Recognition</label>
+                  <select id="m3"><option value="Green">Green (Engaged)</option><option value="Amber">Amber (Partially Engaged)</option><option value="Red">Red (Disengaged)</option></select>
+                </div>
+                <div class="form-control">
+                  <label>4. Work Relationships</label>
+                  <select id="m4"><option value="Green">Green (Engaged)</option><option value="Amber">Amber (Partially Engaged)</option><option value="Red">Red (Disengaged)</option></select>
+                </div>
+                <div class="form-control">
+                  <label>5. Job Content</label>
+                  <select id="m5"><option value="Green">Green (Engaged)</option><option value="Amber">Amber (Partially Engaged)</option><option value="Red">Red (Disengaged)</option></select>
+                </div>
+                <div class="form-control">
+                  <label>6. Feeling Valued & Heard</label>
+                  <select id="m6"><option value="Green">Green (Engaged)</option><option value="Amber">Amber (Partially Engaged)</option><option value="Red">Red (Disengaged)</option></select>
+                </div>
+                <div class="form-control">
+                  <label>7. Ownership</label>
+                  <select id="m7"><option value="Green">Green (Engaged)</option><option value="Amber">Amber (Partially Engaged)</option><option value="Red">Red (Disengaged)</option></select>
+                </div>
+                <div class="form-control">
+                  <label>8. Learning & Development</label>
+                  <select id="m8"><option value="Green">Green (Engaged)</option><option value="Amber">Amber (Partially Engaged)</option><option value="Red">Red (Disengaged)</option></select>
+                </div>
+              </div>
+
+              <div class="form-control">
+                <label>9. Overall Assessment</label>
+                <select id="m9"><option value="Green">Green (Engaged)</option><option value="Amber">Amber (Partially Engaged)</option><option value="Red">Red (Disengaged)</option></select>
+              </div>
+
+              <div class="form-control">
+                <label>Skip Level Connect Required?</label>
+                <select id="cSkipLevel"><option value="No">No</option><option value="Yes">Yes</option></select>
+              </div>
+
+              <div class="form-control">
+                <label>Key Highlights & Action Points</label>
+                <textarea id="cNotes" rows="3" placeholder="Specify notes..." required></textarea>
+              </div>
+
+              <button type="submit" class="btn-login">Save Connect Session</button>
+            </form>
+          </div>
+        </div>
+
+        <!-- MODULE 3: IAM CONTROL -->
+        <div id="iamModule" class="tab-module">
+          <div class="post-card">
+            <div class="post-header">IAM Role Access Management</div>
+            <div class="form-control">
+              <label>Employee ID</label>
+              <input type="text" id="iamEmpId" placeholder="EMP004">
+            </div>
+            <div class="form-control">
+              <label>Select Role</label>
+              <select id="iamRole">
+                <option value="ROLE_ADMIN">Admin</option>
+                <option value="ROLE_TOP_MGMT">Top Level Management</option>
+                <option value="ROLE_HRBP">HRBP Employee</option>
+                <option value="ROLE_EMP">Standard Employee</option>
+                <option value="ROLE_GUEST">Guest Trainee</option>
+              </select>
+            </div>
+            <button class="btn-login" onclick="submitRoleChange()">Update Role</button>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <script>
+    let activeSession = null;
+
+    // Login Submission
+    document.getElementById('loginForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const userVal = document.getElementById('loginUsername').value;
+      const passVal = document.getElementById('loginPassword').value;
+      const btn = document.getElementById('loginBtn');
+      const err = document.getElementById('loginError');
+
+      btn.innerText = "Authenticating...";
+      btn.disabled = true;
+      err.style.display = 'none';
+
+      google.script.run
+        .withSuccessHandler((res) => {
+          btn.innerText = "Log In";
+          btn.disabled = false;
+
+          if (res.success) {
+            activeSession = res;
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('portalLayout').style.display = 'flex';
+            document.getElementById('activeUserLabel').innerText = res.user.name + " (" + res.user.role + ")";
+          } else {
+            err.innerText = res.message;
+            err.style.display = 'block';
+          }
+        })
+        .authenticateUser(userVal, passVal);
+    });
+
+    // Handle Employee Search
+    function handleSearch(e) {
+      if (e.key === 'Enter') {
+        const targetEmpId = document.getElementById('empSearchInput').value.trim();
+        if (!targetEmpId) return;
+
+        google.script.run
+          .withSuccessHandler((res) => {
+            if (res.success) {
+              const p = res.profile;
+              document.getElementById('profileContainer').style.display = 'block';
+              document.getElementById('profileNameHeader').innerText = p.firstName + " " + p.lastName + " (" + p.empId + ")";
+              document.getElementById('pDept').innerText = p.department;
+              document.getElementById('pDesig').innerText = p.designation;
+              document.getElementById('pL1').innerText = p.l1Manager || 'N/A';
+              document.getElementById('pL2').innerText = p.l2Manager || 'N/A';
+              document.getElementById('pLoc').innerText = p.workLocation;
+              document.getElementById('pEmail').innerText = p.officialEmail;
+              document.getElementById('pPEmail').innerText = p.personalEmail;
+              document.getElementById('pPhone').innerText = p.phone;
+              document.getElementById('pEdu').innerText = p.educationalInfo;
+              document.getElementById('pSalary').innerText = p.grossSalary || '₹ ***** (Masked)';
+              document.getElementById('pSkills').innerText = p.skills;
+              document.getElementById('pCerts').innerText = p.certifications;
+            } else {
+              alert(res.message);
+            }
+          })
+          .getEmployee360Profile(targetEmpId, activeSession.user.role);
+      }
+    }
+
+    // HRBP Connect Submission
+    document.getElementById('hrbpConnectForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const payload = {
+        hrbpEmpId: activeSession.user.empId,
+        hrbpEmail: activeSession.user.email,
+        targetEmpId: document.getElementById('cTargetEmpId').value,
+        connectDate: document.getElementById('cConnectDate').value,
+        careerGrowth: document.getElementById('m1').value,
+        workLifeBalance: document.getElementById('m2').value,
+        recognition: document.getElementById('m3').value,
+        workRelationships: document.getElementById('m4').value,
+        jobContent: document.getElementById('m5').value,
+        feelingValuedHeard: document.getElementById('m6').value,
+        ownership: document.getElementById('m7').value,
+        learningDevelopment: document.getElementById('m8').value,
+        overallAssessment: document.getElementById('m9').value,
+        skipLevelRequired: document.getElementById('cSkipLevel').value,
+        keyHighlights: document.getElementById('cNotes').value
+      };
+
+      google.script.run
+        .withSuccessHandler((res) => {
+          alert(res.message);
+          document.getElementById('hrbpConnectForm').reset();
+        })
+        .saveHRBPConnect(payload);
+    });
+
+    function submitRoleChange() {
+      const empId = document.getElementById('iamEmpId').value;
+      const role = document.getElementById('iamRole').value;
+      google.script.run
+        .withSuccessHandler(res => alert(res.message))
+        .updateIAMRole(empId, role, activeSession.user.email);
+    }
+
+    function switchSubTab(tabId, el) {
+      document.querySelectorAll('.sub-content').forEach(c => c.style.display = 'none');
+      document.querySelectorAll('.sub-tab').forEach(t => t.classList.remove('active'));
+      document.getElementById(tabId).style.display = 'block';
+      el.classList.add('active');
+    }
+
+    function switchTab(tabId, el) {
+      document.querySelectorAll('.tab-module').forEach(m => m.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      document.getElementById(tabId).classList.add('active');
+      el.classList.add('active');
+    }
+
+    function logoutSession() {
+      location.reload();
+    }
+  </script>
+</body>
+</html>
